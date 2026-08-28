@@ -30,8 +30,11 @@ document.addEventListener('DOMContentLoaded', () => {
         const taskStart = parseInt(sessionStorage.getItem('__xStart') || "0");
         const elapsed = (Date.now() - taskStart) / 1000;
         
-        // CRITICAL FIX: taskStart === 0 means they didn't originate from the button click!
-        if (taskStart === 0 || elapsed < 5) {
+        // Anti-Bypass Header/Referrer Check
+        const ref = document.referrer.toLowerCase();
+        const isValidRef = ref === "" || ref.includes("linkvertise.com") || ref.includes("link-to.net") || ref.includes(window.location.hostname);
+        
+        if (taskStart === 0 || elapsed < 5 || !isValidRef) {
             log("Invalid session signature or token expired. Please try again.", true);
             currentCheckpoint = 0;
             localStorage.setItem('__xCur', "0");
