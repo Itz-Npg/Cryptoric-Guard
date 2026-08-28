@@ -14,8 +14,7 @@ let currentCheckpoint = parseInt(localStorage.getItem('cg_currentCheckpoint') ||
 const guard = window.CryptoricGuard.init({
     botLockdown: true,
     blockAdblockers: true,
-    minTaskTimeSeconds: 5, // REAL PROTECTION: User MUST spend at least 5 seconds on the link!
-    silentMode: true // Optional feature if we added it to guard, but we'll handle silence here manually
+    minTaskTimeSeconds: 0 // We handle the time validation silently in app.js now
 });
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -28,10 +27,13 @@ document.addEventListener('DOMContentLoaded', () => {
     if (incomingCheckpoint) {
         log("User returned from Linkvertise to Checkpoint " + incomingCheckpoint);
         
-        // --- CRYPTORIC GUARD TIME VALIDATION ---
-        if (!guard.validateTime()) {
+        // --- SILENT TIME VALIDATION ---
+        const taskStart = parseInt(sessionStorage.getItem('_cgTaskStart') || "0");
+        const elapsed = (Date.now() - taskStart) / 1000;
+        
+        if (elapsed < 5 && taskStart !== 0) {
             // Bypass detected! They returned too fast!
-            // SILENT PUNISHMENT (Do NOT tell them we detected a bypass or time validation!)
+            // SILENT PUNISHMENT
             log("Invalid session signature or token expired. Please try again.", true);
             
             // Punish the bypasser by silently wiping their progress
