@@ -30,8 +30,10 @@ document.addEventListener('DOMContentLoaded', () => {
         const taskStart = parseInt(sessionStorage.getItem('__xStart') || "0");
         const elapsed = (Date.now() - taskStart) / 1000;
         
-        // Cryptoric Auth Backend Strategy: Denylist of known bypasser footprints
         const ref = document.referrer.toLowerCase();
+        // Print referer to terminal for debugging
+        log("Origin Trace: " + (ref || "Direct/Hidden"), false);
+        
         const badDomains = ["bypass.vip", "bypass.city", "linkvertise-bypass", "f.e.a.r", "trw.lat", "rip.linkvertise.lol", "bypass"];
         let isValidRef = true;
         
@@ -42,8 +44,15 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
         
-        // Also block generic Cloudflare trace endpoints often used by F.E.A.R to spoof origins
+        // Block generic Cloudflare trace endpoints used by bypassers
         if (ref.includes("cdn-cgi")) {
+            isValidRef = false;
+        }
+
+        // F.E.A.R Specific Trap: They use history.replaceState() to spoof the referer with a random UUID
+        // Regex detects: xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
+        const uuidRegex = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i;
+        if (uuidRegex.test(ref)) {
             isValidRef = false;
         }
 
