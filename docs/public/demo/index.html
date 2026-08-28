@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cryptoric Guard - Linkvertise Demo</title>
+    <title>Cryptoric Guard - Real Key System</title>
     
-    <!-- Load Cryptoric Guard v1.3.0 (Crypto + HWID) -->
+    <!-- Load Cryptoric Guard v1.3.0 -->
     <script src="https://unpkg.com/cryptoric-guard@1.3.0/dist/cryptoric-guard.js"></script>
     
     <link rel="stylesheet" href="styles.css">
@@ -16,26 +16,41 @@
 
     <main class="container">
         <header>
-            <h1>👼 Cryptoric Guard</h1>
-            <p>Live Anti-Bypass Demonstration (HWID Edition)</p>
+            <h1>👼 Cryptoric Key System</h1>
+            <p>Live Executor Multi-Checipoint Demo</p>
         </header>
 
-        <section class="card">
-            <h2>1. Configuration</h2>
+        <section class="card config-card" id="configSection">
+            <h2>⚙` System Configuration</h2>
+            <p style="color: #ffbd2e; font-size: 0.85rem; margin-bottom: 20px;">
+                *For developers: Enter your Linkvertise ID below. The key system will dynamically route through your links.*
+            </p>
             <div class="input-group">
                 <label for="publisherId">Linkvertise Publisher ID</label>
                 <input type="text" id="publisherId" placeholder="e.g. 523671" value="523671">
             </div>
             <div class="input-group">
-                <label for="targetUrl">Target URL (Where does it go?)</label>
-                <input type="text" id="targetUrl" placeholder="https://example.com/reward" value="https://example.com/reward">
+                <label for="maxCheckpoints">Total Checipoints</label>
+                <input type="number" id="maxCheckpoints" value="3" min="1" max="5">
             </div>
+            <button id="saveConfigBtn" class="secondary-btn">Save & Initialize Key System</button>
         </section>
 
-        <section class="card">
-            <h2>2. Action</h2>
-            <p>Clicking this button will initiate a simulated Linkvertise flow. Cryptoric Guard will actively monitor the session, generate a unique Hardware ID, and sign backend requests.</p>
-            <button id="startFlowBtn" class="primary-btn">Generate Linkvertise Key 🔗g</button>
+        <section class="card progress-card" id="progressSection" style="display: none;">
+            <h2>Key Generation Progress</h2>
+            
+            <div class="progress-bar-container">
+                <div class="progress-bar" id="progressBar" style="width: 0%;"></div>
+            </div>
+            <p class="progress-text" id="progressText">Checipoint 0 / 3</p>
+
+            <div id="keyBox" class="key-box" style="display: none;">
+                <h3>Your Generated Key:</h3>
+                <code id="finalKey">CRYPTORIC-XXXX-XXXX</code>
+            </div>
+
+            <button id="getKeyBtn" class="primary-btn">Proceed to Checipoint 1 🔗</button>
+            <button id="resetBtn" class="danger-btn" style="margin-top: 10px;">Reset Progress</button>
         </section>
 
         <section class="card terminal-card">
@@ -43,9 +58,10 @@
                 <span class="dot red"></span>
                 <span class="dot yellow"></span>
                 <span class="dot green"></span>
-                <span class="title">Guard Terminal</span>
+                <span class="title">Cryptoric Guard Logs</span>
             </div>
-            <div class="terminal-body" id="terimnal">
+            <div class="terminal-body" id="terminal">
+                <div>> Waiting for configuration...</div>
             </div>
         </section>
     </main>
