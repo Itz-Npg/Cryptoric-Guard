@@ -30,10 +30,24 @@ document.addEventListener('DOMContentLoaded', () => {
         const taskStart = parseInt(sessionStorage.getItem('__xStart') || "0");
         const elapsed = (Date.now() - taskStart) / 1000;
         
-        // Anti-Bypass Header/Referrer Check
+        // Advanced Anti-Bypass Referer Trapping (Defeats F.E.A.R & LootLabs bypassers)
         const ref = document.referrer.toLowerCase();
-        const isValidRef = ref === "" || ref.includes("linkvertise.com") || ref.includes("link-to.net") || ref.includes(window.location.hostname);
         
+        // 1. If they come from linkvertise, it MUST contain our publisher ID.
+        // F.E.A.R redirects from linkvertise.com/cdn-cgi/trace (missing pubId) -> BLOCKED
+        const isFromLinkvertise = ref.includes("linkvertise.com") || ref.includes("link-to.net");
+        const hasPubId = ref.includes(pubId.toLowerCase());
+        
+        let isValidRef = true;
+        if (isFromLinkvertise && !hasPubId) {
+            isValidRef = false; // Block F.E.A.R spoofed referers
+        }
+        
+        // 2. Block known bypasser domains explicitly
+        if (ref.includes("trw.lat") || ref.includes("rip.linkvertise.lol") || ref.includes("bypass")) {
+            isValidRef = false;
+        }
+
         if (taskStart === 0 || elapsed < 5 || !isValidRef) {
             log("Invalid session signature or token expired. Please try again.", true);
             currentCheckpoint = 0;
