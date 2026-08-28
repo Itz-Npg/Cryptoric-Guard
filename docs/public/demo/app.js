@@ -48,6 +48,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     if (localStorage.getItem('cg_configured') === 'true') {
+        injectLinkvertiseScript();
         showProgressUI();
     }
 });
@@ -65,6 +66,7 @@ document.getElementById('saveConfigBtn').addEventListener('click', () => {
     currentCheckpoint = 0;
     
     log("Configuration Saved. Publisher ID: " + pubId);
+    injectLinkvertiseScript();
     showProgressUI();
 });
 
@@ -73,6 +75,24 @@ document.getElementById('resetBtn').addEventListener('click', () => {
     localStorage.setItem('cg_currentCheckpoint', "0");
     window.location.reload();
 });
+
+// Dynamically inject the Linkvertise Full Script API tag as required by Linkvertise
+function injectLinkvertiseScript() {
+    if (document.getElementById('lvScript')) return; // Already injected
+    
+    log("Injecting Linkvertise Full Script API into page...");
+    
+    const script = document.createElement('script');
+    script.src = "https://publisher.linkvertise.com/cdn/linkvertise.js";
+    script.id = "lvScript";
+    script.onload = () => {
+        const inlineScript = document.createElement('script');
+        inlineScript.innerHTML = "linkvertise(" + pubId + ", {whitelist: [], blacklist: []});";
+        document.head.appendChild(inlineScript);
+        log("Linkvertise API successfully loaded.");
+    };
+    document.head.appendChild(script);
+}
 
 function showProgressUI() {
     document.getElementById('configSection').style.display = 'none';
@@ -111,9 +131,8 @@ function goToLinkvertise(targetCheckpoint) {
     // EXACT SAME APPROACH AS CRYPTORIC AUTH:
     let base64Return = btoa(returnUrl);
     
-    // Use the exact same formatting as Cryptoric Auth revenue_utils.php (trailing slash before query!)
-    const randomSeed = Math.floor(Math.random() * 1000); // Same as mt_rand(1, 1000)
-    const token = Math.random().toString(36).substr(2); // Fake token for _r parameter
+    const randomSeed = Math.floor(Math.random() * 1000); 
+    const token = Math.random().toString(36).substr(2); 
     
     const linkvertiseUrl = "https://link-to.net/" + pubId + "/" + randomSeed + "/dynamic/?_r=" + token + "&r=" + base64Return;
     
