@@ -1,23 +1,23 @@
-﻿{
-    "name":  "cryptoric-guard",
-    "version":  "1.2.0",
-    "description":  "The Ultimate Anti-Bypass Framework",
-    "main":  "dist/cryptoric-guard.js",
-    "scripts":  {
-                    "build":  "node build.js",
-                    "prepublishOnly":  "npm run build",
-                    "docs:dev":  "vitepress dev docs",
-                    "docs:build":  "vitepress build docs",
-                    "docs:preview":  "vitepress preview docs"
-                },
-    "author":  "NPG",
-    "license":  "MIT",
-    "repository":  {
-                       "type":  "git",
-                       "url":  "git+https://github.com/Itz-Npg/Cryptoric-Guard.git"
-                   },
-    "devDependencies":  {
-                            "vitepress":  "^1.6.4",
-                            "vue":  "^3.5.42"
-                        }
+{
+  "name": "cryptoric-guard",
+  "version": "1.2.0",
+  "description": "The Ultimate Anti-Bypass Framework",
+  "main": "dist/cryptoric-guard.js",
+  "scripts": {
+    "build": "node build.js",
+    "prepublishOnly": "npm run build",
+    "docs:dev": "vitepress dev docs",
+    "docs:build": "vitepress build docs",
+    "docs:preview": "vitepress preview docs"
+  },
+  "author": "NPG",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Itz-Npg/Cryptoric-Guard.git"
+  },
+  "devDependencies": {
+    "vitepress": "^1.6.4",
+    "vue": "^3.5.42"
+  }
 }
