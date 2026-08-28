@@ -15,7 +15,8 @@
           { text: "Introduction", link: "/introduction" },
           { text: "Quick Start", link: "/quick-start" },
           { text: "Configuration", link: "/configuration" },
-          { text: "Cryptography", link: "/cryptography" }
+          { text: "Cryptography", link: "/cryptography" },
+          { text: "Live Example", link: "/example" }
         ]
       }
     ],
