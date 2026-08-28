@@ -1,27 +1,28 @@
 ﻿(() => {
   "use strict";
 
-  const GUARD_VERSION = "4.0.0 (Crypto Edition)";
+  const GUARD_VERSION = "4.0.0 (Crypto & HWID Edition)";
   const REFRESH_KEY = "_cgLastRefresh";
   const TASK_START_KEY = "_cgTaskStart";
   const TASK_COUNT_KEY = "_cgTaskCount";
   
   let hasDetectedBypass = false;
   let activeConfig = {};
+  let cachedHWID = null;
 
   const defaultConfig = {
-    // Core Security
     botLockdown: true,
-    
-    // Anti-Bypass Engine
     cryptoricGuard: true,
     deepEngine: true,
     minTaskTimeSeconds: 0,
     
     // Cryptography & API Security
-    requestHashing: true,          // Dynamically sign API requests
-    hashSecret: "cg_default_secret", // Developer must override this
-    hashEndpoints: ["/api/", "submit"], // Endpoints that require signatures
+    requestHashing: true,          
+    hashSecret: "cg_default_secret", 
+    hashEndpoints: ["/api/", "submit", "redeem"], 
+    
+    // Hardware ID Fingerprinting
+    useHWID: true, // Attach HWID to requests
     
     // Bypass Traps
     refererTrapping: true,
@@ -29,7 +30,6 @@
     userscriptDetection: true,
     spoofTrap: true,
     
-    // Aggressive Walls
     blockVpns: true,
     blockAdblockers: true,
     blockIncognito: true,
@@ -66,11 +66,58 @@
   }
 
   /* ==========================================
+     HWID FINGERPRINTING
+  ========================================== */
+  function generateHWID() {
+      if (cachedHWID) return cachedHWID;
+      
+      const nav = window.navigator;
+      const screen = window.screen;
+      let fingerprint = "";
+      
+      fingerprint += nav.userAgent || "";
+      fingerprint += nav.language || "";
+      fingerprint += nav.hardwareConcurrency || "";
+      fingerprint += nav.deviceMemory || "";
+      fingerprint += screen.colorDepth || "";
+      fingerprint += screen.width + "x" + screen.height;
+      fingerprint += new Date().getTimezoneOffset();
+      
+      // Canvas Fingerprint
+      try {
+          const canvas = document.createElement('canvas');
+          const ctx = canvas.getContext('2d');
+          ctx.textBaseline = "top";
+          ctx.font = "14px 'Arial'";
+          ctx.textBaseline = "alphabetic";
+          ctx.fillStyle = "#f60";
+          ctx.fillRect(125,1,62,20);
+          ctx.fillStyle = "#069";
+          ctx.fillText("CryptoricGuard HWID", 2, 15);
+          ctx.fillStyle = "rgba(102, 204, 0, 0.7)";
+          ctx.fillText("CryptoricGuard HWID", 4, 17);
+          fingerprint += canvas.toDataURL();
+      } catch(e) {}
+
+      // Fast Hash of the fingerprint string
+      let hash = 5381;
+      for (let i = 0; i < fingerprint.length; i++) {
+          hash = ((hash << 5) + hash) + fingerprint.charCodeAt(i);
+      }
+      cachedHWID = "HWID-" + (hash >>> 0).toString(16);
+      return cachedHWID;
+  }
+
+  /* ==========================================
      CRYPTOGRAPHY ENGINE (Fast Sync Hash)
   ========================================== */
   function generateSignature(url, payload) {
     const timestamp = Date.now();
-    const rawData = url + activeConfig.hashSecret + timestamp + (payload || "");
+    let rawData = url + activeConfig.hashSecret + timestamp + (payload || "");
+    
+    if (activeConfig.useHWID) {
+        rawData += generateHWID();
+    }
     
     // Fast synchronous bitwise hash (DJB2 variant)
     let hash = 5381;
@@ -81,7 +128,8 @@
     
     return {
         signature: signature,
-        timestamp: timestamp.toString()
+        timestamp: timestamp.toString(),
+        hwid: activeConfig.useHWID ? generateHWID() : null
     };
   }
 
@@ -94,20 +142,17 @@
      ANTI-BYPASS ENGINE & NETWORK INTERCEPTION
   ========================================== */
   function setupDeepEngineAndCrypto() {
-    // Intercept Fetch API
     const originalFetch = window.fetch;
     window.fetch = function (...args) {
       const url = args[0]?.url || args[0];
       let options = args[1] || {};
 
       if (typeof url === "string") {
-        // 1. Check for Bypass Signatures
         if (activeConfig.deepEngine && signatures.deepEngine.some(p => url.toLowerCase().includes(p))) {
           handleDetection("Deep Engine: Malicious fetch intercepted");
           return Promise.reject("Blocked");
         }
 
-        // 2. Cryptographic Request Signing
         if (shouldHash(url)) {
             const bodyStr = typeof options.body === 'string' ? options.body : "";
             const cryptoData = generateSignature(url, bodyStr);
@@ -115,13 +160,15 @@
             options.headers = options.headers || {};
             options.headers['X-Cryptoric-Signature'] = cryptoData.signature;
             options.headers['X-Cryptoric-Timestamp'] = cryptoData.timestamp;
+            if (cryptoData.hwid) {
+                options.headers['X-Cryptoric-HWID'] = cryptoData.hwid;
+            }
             args[1] = options;
         }
       }
       return originalFetch.apply(this, args);
     };
 
-    // Intercept XMLHttpRequest
     const originalOpen = XMLHttpRequest.prototype.open;
     const originalSend = XMLHttpRequest.prototype.send;
     
@@ -140,6 +187,9 @@
            const cryptoData = generateSignature(this._cgUrl, bodyStr);
            this.setRequestHeader('X-Cryptoric-Signature', cryptoData.signature);
            this.setRequestHeader('X-Cryptoric-Timestamp', cryptoData.timestamp);
+           if (cryptoData.hwid) {
+               this.setRequestHeader('X-Cryptoric-HWID', cryptoData.hwid);
+           }
        }
        originalSend.call(this, body);
     };
@@ -326,6 +376,7 @@
     
     return {
        validateTime: window.CryptoricGuard?.validateCompletionTime || (() => true),
+       getHWID: generateHWID,
        version: GUARD_VERSION
     };
   }
