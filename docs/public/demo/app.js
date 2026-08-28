@@ -14,7 +14,8 @@ let currentCheckpoint = parseInt(localStorage.getItem('cg_currentCheckpoint') ||
 const guard = window.CryptoricGuard.init({
     botLockdown: true,
     blockAdblockers: true,
-    minTaskTimeSeconds: 5
+    minTaskTimeSeconds: 5, // REAL PROTECTION: User MUST spend at least 5 seconds on the link!
+    silentMode: true // Optional feature if we added it to guard, but we'll handle silence here manually
 });
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -27,16 +28,21 @@ document.addEventListener('DOMContentLoaded', () => {
     if (incomingCheckpoint) {
         log("User returned from Linkvertise to Checkpoint " + incomingCheckpoint);
         
+        // --- CRYPTORIC GUARD TIME VALIDATION ---
         if (!guard.validateTime()) {
-            log("🚨 BYPASS DETECTED! You returned impossibly fast (<5 seconds).", true);
-            log("❌ Progress has been wiped.", true);
-            alert("Bypass Detected! Your progress has been reset.");
+            // Bypass detected! They returned too fast!
+            // SILENT PUNISHMENT (Do NOT tell them we detected a bypass or time validation!)
+            log("Invalid session signature or token expired. Please try again.", true);
             
+            // Punish the bypasser by silently wiping their progress
             currentCheckpoint = 0;
             localStorage.setItem('cg_currentCheckpoint', "0");
+            
+            // Remove the ?checkpoint from URL so they can't refresh
             window.history.replaceState({}, document.title, window.location.pathname);
         } else {
-            log("✅ Cryptoric Guard Time Validation Passed!");
+            // Valid completion!
+            log("Cryptoric Signature Validated!");
             const targetCP = parseInt(incomingCheckpoint);
             if(targetCP === currentCheckpoint + 1) {
                 currentCheckpoint = targetCP;
@@ -76,7 +82,6 @@ document.getElementById('resetBtn').addEventListener('click', () => {
     window.location.reload();
 });
 
-// Dynamically inject the Linkvertise Full Script API tag as required by Linkvertise
 function injectLinkvertiseScript() {
     if (document.getElementById('lvScript')) return; // Already injected
     
@@ -138,7 +143,6 @@ function goToLinkvertise(targetCheckpoint) {
     
     log("Starting Checkpoint " + targetCheckpoint + "...");
     log("Target URL: " + linkvertiseUrl);
-    log("Redirecting user. They must spend at least 5 seconds on the target page!");
     
     sessionStorage.setItem('_cgTaskStart', Date.now().toString());
     
