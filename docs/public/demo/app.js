@@ -8,7 +8,6 @@ function log(msg, isError = false) {
 }
 
 let pubId = localStorage.getItem('cg_pubId') || "523671";
-let fallbackId = localStorage.getItem('cg_fallbackId') || "";
 let maxCheckpoints = parseInt(localStorage.getItem('cg_maxCheckpoints') || "3");
 let currentCheckpoint = parseInt(localStorage.getItem('cg_currentCheckpoint') || "0");
 
@@ -23,7 +22,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const incomingCheckpoint = urlParams.get('checkpoint');
 
     document.getElementById('publisherId').value = pubId;
-    document.getElementById('fallbackId').value = fallbackId;
     document.getElementById('maxCheckpoints').value = maxCheckpoints;
 
     if (incomingCheckpoint) {
@@ -56,21 +54,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
 document.getElementById('saveConfigBtn').addEventListener('click', () => {
     pubId = document.getElementById('publisherId').value;
-    fallbackId = document.getElementById('fallbackId').value;
     maxCheckpoints = parseInt(document.getElementById('maxCheckpoints').value);
     
-    if(!pubId || !fallbackId || !maxCheckpoints) return alert("Fill out the full config! You MUST provide a Fallback Link ID.");
+    if(!pubId || !maxCheckpoints) return alert("Fill out the full config!");
     
     localStorage.setItem('cg_pubId', pubId);
-    localStorage.setItem('cg_fallbackId', fallbackId);
     localStorage.setItem('cg_maxCheckpoints', maxCheckpoints.toString());
     localStorage.setItem('cg_configured', 'true');
     localStorage.setItem('cg_currentCheckpoint', "0");
     currentCheckpoint = 0;
     
-    log("Configuration Saved.");
-    log("Publisher ID: " + pubId);
-    log("Fallback Link ID: " + fallbackId);
+    log("Configuration Saved. Publisher ID: " + pubId);
     showProgressUI();
 });
 
@@ -114,11 +108,14 @@ function goToLinkvertise(targetCheckpoint) {
     const currentUrl = window.location.origin + window.location.pathname;
     const returnUrl = currentUrl + "?checkpoint=" + targetCheckpoint;
     
+    // EXACT SAME APPROACH AS CRYPTORIC AUTH:
     let base64Return = btoa(returnUrl);
-    base64Return = encodeURIComponent(base64Return);
     
-    // Use the actual fallback ID instead of a random seed
-    const linkvertiseUrl = "https://link-to.net/" + pubId + "/" + fallbackId + "/dynamic?r=" + base64Return + "&v=2";
+    // Use the exact same formatting as Cryptoric Auth revenue_utils.php (trailing slash before query!)
+    const randomSeed = Math.floor(Math.random() * 1000); // Same as mt_rand(1, 1000)
+    const token = Math.random().toString(36).substr(2); // Fake token for _r parameter
+    
+    const linkvertiseUrl = "https://link-to.net/" + pubId + "/" + randomSeed + "/dynamic/?_r=" + token + "&r=" + base64Return;
     
     log("Starting Checkpoint " + targetCheckpoint + "...");
     log("Target URL: " + linkvertiseUrl);
