@@ -1,6 +1,6 @@
 ﻿# Cryptoric Guard - The Ultimate Anti-Bypass Framework
 
-Cryptoric Guard is a highly modular, advanced security system designed to protect endpoints, links, and content from automated bypasses, userscripts (F.E.A.R, FastForward), and tampering.
+Cryptoric Guard is a highly modular, advanced security system designed to protect endpoints, links, and content from automated bypasses, userscripts (F.E.A.R, FastForward, Bypass.vip. Bypass.city and many more), and tampering.
 
 ## Installation
 
