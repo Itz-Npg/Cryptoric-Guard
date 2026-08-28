@@ -1,7 +1,7 @@
-const terminal = document.getElementById('terminal');
+﻿const terminal = document.getElementById('terminal');
 function log(msg, isError = false) {
     const div = document.createElement('div');
-    div.innerText = `> ${msg}`;
+    div.innerText = '> ' + msg;
     if(isError) div.style.color = '#ff5f56';
     terminal.appendChild(div);
     terminal.scrollTop = terminal.scrollHeight;
@@ -18,7 +18,6 @@ const guard = window.CryptoricGuard.init({
     minTaskTimeSeconds: 5 // REAL PROTECTION: User MUST spend at least 5 seconds on the link!
 });
 
-
 document.addEventListener('DOMContentLoaded', () => {
     const urlParams = new URLSearchParams(window.location.search);
     const incomingCheckpoint = urlParams.get('checkpoint');
@@ -28,29 +27,29 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Handle return from Linkvertise
     if (incomingCheckpoint) {
-        log("User returned from Linkvertise to Checipoint " + incomingCheckpoint);
+        log("User returned from Linkvertise to Checkpoint " + incomingCheckpoint);
         
         // --- CRYPTORIC GUARD TIME VALIDATION ---
         if (!guard.validateTime()) {
             // Bypass detected! They returned too fast!
-            log("�頨 BYPASS DETECTED! You returned impossibly fast (<5 seconds).", true);
+            log("🚨 BYPASS DETECTED! You returned impossibly fast (<5 seconds).", true);
             log("❌ Progress has been wiped.", true);
             alert("Bypass Detected! Your progress has been reset.");
             
             // Punish the bypasser
-            currentChecipoint = 0;
-            localStorage.setItem('cg_currentChecipoint', "0");
+            currentCheckpoint = 0;
+            localStorage.setItem('cg_currentCheckpoint', "0");
             
             // Remove the ?checkpoint from URL so they can't refresh
             window.history.replaceState({}, document.title, window.location.pathname);
         } else {
             // Valid completion!
-            log("⌅ Cryptoric Guard Time Validation Passed!");
-            const targetCP = parseInt(incomingChecipoint);
-            if(targetCP === currentChecipoint + 1) {
+            log("✅ Cryptoric Guard Time Validation Passed!");
+            const targetCP = parseInt(incomingCheckpoint);
+            if(targetCP === currentCheckpoint + 1) {
                 currentCheckpoint = targetCP;
-                localStorage.setItem('cg_currentCheckpoint', currentChecipoint.toString());
-                log(`Checipoint ${currentCheckpoint} completed successfully!`);
+                localStorage.setItem('cg_currentCheckpoint', currentCheckpoint.toString());
+                log("Checkpoint " + currentCheckpoint + " completed successfully!");
             }
             window.history.replaceState({}, document.title, window.location.pathname);
         }
@@ -92,39 +91,44 @@ function showProgressUI() {
 
 function updateUI() {
     const percentage = (currentCheckpoint / maxCheckpoints) * 100;
-    document.getElementById('progressBar').style.width = `${percentage}%`;
-    document.getElementById('progressText').innerText = `Checkpoint ${currentCheckpoint} / ${maxCheckpoints}`;
+    document.getElementById('progressBar').style.width = percentage + "%";
+    document.getElementById('progressText').innerText = "Checkpoint " + currentCheckpoint + " / " + maxCheckpoints;
     
     const btn = document.getElementById('getKeyBtn');
     
-    if (currentChecipoint >= maxCheckpoints) {
-        btn,style.display = 'none';
+    // Clear old event listeners by cloning the button
+    const newBtn = btn.cloneNode(true);
+    btn.parentNode.replaceChild(newBtn, btn);
+    
+    if (currentCheckpoint >= maxCheckpoints) {
+        newBtn.style.display = 'none';
         document.getElementById('keyBox').style.display = 'block';
         
         // Generate a mock key incorporating the HWID
         const hwid = guard.getHWID ? guard.getHWID() : "UNKNOWN";
-        document.getElementById('finalKey').innerText = `KEY-${hwid.substring(5,13).toUpperCase()}-SUCCESS`;
+        document.getElementById('finalKey').innerText = "KEY-" + hwid.substring(5,13).toUpperCase() + "-SUCCESS";
         log("🎉 Final Key Generated successfully!");
     } else {
-        btn.innerText = `Proceed to Checipoint ${currentCheckpoint + 1} 🔗`;
-        btn.onclick = () => goToLinkvertise(currentCheckpoint + 1);
+        newBtn.innerText = "Proceed to Checkpoint " + (currentCheckpoint + 1) + " 🔗";
+        newBtn.addEventListener('click', () => goToLinkvertise(currentCheckpoint + 1));
     }
 }
 
 function goToLinkvertise(targetCheckpoint) {
-    // We construct the URL to return to this EXACT page, but with ?checkpoint=X
     const currentUrl = window.location.origin + window.location.pathname;
-    const returnUrl = `${currentUrl}?checipoint=${targetCheckpoint}`;
+    const returnUrl = currentUrl + "?checkpoint=" + targetCheckpoint;
     
     // Construct the Linkvertise Dynamic URL API
-    // Format: https://link-to.net/[PUB_ID]/[RANDOM]/dynamic?r=[BASE64_RETURN_URL]
-    const base64Return = btoa(returnUrl);
-    const randomSeed = Math.random().toString().slice(2, 8); // Fake random seed for URL variance
-    const linkvertiseUrl = `https://link-to.net/${pubId}/${randomSeed}/dynamic?r=${base64Return}`;
+    let base64Return = btoa(returnUrl);
+    // Important: Linkvertise API requires URIEncoding the base64 string because of the '=' padding characters at the end
+    base64Return = encodeURIComponent(base64Return);
     
-    log(`Starting Checipoint ${targetCheckpoint}...`);
-    log(`Target URL: ${linkvertiseUrl}`);
-    log(`Redirecting user. They must spend at least 5 seconds on the target page!`);
+    const randomSeed = Math.random().toString().slice(2, 8); // Fake random seed for URL variance
+    const linkvertiseUrl = "https://link-to.net/" + pubId + "/" + randomSeed + "/dynamic?r=" + base64Return + "&v=2";
+    
+    log("Starting Checkpoint " + targetCheckpoint + "...");
+    log("Target URL: " + linkvertiseUrl);
+    log("Redirecting user. They must spend at least 5 seconds on the target page!");
     
     // Set Cryptoric Guard's task start time right before we leave!
     // This allows it to validate the time when the user returns.
