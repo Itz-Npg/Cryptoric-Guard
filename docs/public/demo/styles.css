@@ -91,6 +91,12 @@ header p {
     color: var(--text-primary);
     font-size: 1rem;
     box-sizing: border-box;
+    display: block;
+}
+
+.input-group input:focus {
+    outline: none;
+    border-color: var(--accent);
 }
 
 button {
@@ -102,6 +108,8 @@ button {
     font-weight: 600;
     cursor: pointer;
     transition: 0.2s;
+    box-sizing: border-box;
+    display: block;
 }
 
 .primary-btn { background-color: var(--accent); color: #fff; }
@@ -159,7 +167,7 @@ button {
 }
 
 /* Terminal */
-.terminal-card { padding: 0; }
+.terminal-card { padding: 0; overflow: hidden; }
 .terminal-header { background-color: #2d333b; padding: 10px 16px; display: flex; align-items: center; border-bottom: 1px solid var(--border-color); }
 .dot { width: 12px; height: 12px; border-radius: 50%; margin-right: 8px; }
 .dot.red { background-color: #ff5f56; }
