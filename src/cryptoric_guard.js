@@ -12,24 +12,24 @@
   // Default configuration based on Cryptoric Auth Control Panel
   const defaultConfig = {
     // Core Security
-    botLockdown: false,            // Blocks headless browsers/Puppeteer
+    botLockdown: true,            // Blocks headless browsers/Puppeteer
     
     // Anti-Bypass Engine
     cryptoricGuard: true,          // Core protection
-    deepEngine: false,             // Advanced traffic inspection
-    invisibleValidation: false,    // Background math/timing checks
+    deepEngine: true,             // Advanced traffic inspection
+    invisibleValidation: true,    // Background math/timing checks
     minTaskTimeSeconds: 0,         // Prevent instant completion
     
     // Bypass Traps
-    refererTrapping: false,        // Strict document.referrer checks
-    unicodeTrap: false,            // Detect zero-width characters
-    userscriptDetection: false,    // Tampermonkey/Greasemonkey
-    spoofTrap: false,              // Fake endpoints to bait bypassers
+    refererTrapping: true,        // Strict document.referrer checks
+    unicodeTrap: true,            // Detect zero-width characters
+    userscriptDetection: true,    // Tampermonkey/Greasemonkey
+    spoofTrap: true,              // Fake endpoints to bait bypassers
     
     // Aggressive Walls
-    blockVpns: false,              // Timezone mismatch checks
-    blockAdblockers: false,        // Detect blocked ad elements
-    blockIncognito: false,         // Basic private browsing check
+    blockVpns: true,              // Timezone mismatch checks
+    blockAdblockers: true,        // Detect blocked ad elements
+    blockIncognito: true,         // Basic private browsing check
     maxTasksDaily: 0,              // Rate limiting
     
     allowedReferrers: [],
@@ -324,3 +324,4 @@
     init: initialize
   };
 })();
+
