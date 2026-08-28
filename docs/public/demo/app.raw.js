@@ -30,21 +30,20 @@ document.addEventListener('DOMContentLoaded', () => {
         const taskStart = parseInt(sessionStorage.getItem('__xStart') || "0");
         const elapsed = (Date.now() - taskStart) / 1000;
         
-        // Advanced Anti-Bypass Referer Trapping (Defeats F.E.A.R & LootLabs bypassers)
+        // Cryptoric Auth Backend Strategy: Denylist of known bypasser footprints
         const ref = document.referrer.toLowerCase();
-        
-        // 1. If they come from linkvertise, it MUST contain our publisher ID.
-        // F.E.A.R redirects from linkvertise.com/cdn-cgi/trace (missing pubId) -> BLOCKED
-        const isFromLinkvertise = ref.includes("linkvertise.com") || ref.includes("link-to.net");
-        const hasPubId = ref.includes(pubId.toLowerCase());
-        
+        const badDomains = ["bypass.vip", "bypass.city", "linkvertise-bypass", "f.e.a.r", "trw.lat", "rip.linkvertise.lol", "bypass"];
         let isValidRef = true;
-        if (isFromLinkvertise && !hasPubId) {
-            isValidRef = false; // Block F.E.A.R spoofed referers
+        
+        for (const domain of badDomains) {
+            if (ref.includes(domain)) {
+                isValidRef = false;
+                break;
+            }
         }
         
-        // 2. Block known bypasser domains explicitly
-        if (ref.includes("trw.lat") || ref.includes("rip.linkvertise.lol") || ref.includes("bypass")) {
+        // Also block generic Cloudflare trace endpoints often used by F.E.A.R to spoof origins
+        if (ref.includes("cdn-cgi")) {
             isValidRef = false;
         }
 
