@@ -1,7 +1,7 @@
 ﻿(() => {
   "use strict";
 
-  const GUARD_VERSION = "3.0.0 (Ultimate)";
+  const GUARD_VERSION = "4.0.0 (Crypto Edition)";
   const REFRESH_KEY = "_cgLastRefresh";
   const TASK_START_KEY = "_cgTaskStart";
   const TASK_COUNT_KEY = "_cgTaskCount";
@@ -9,37 +9,38 @@
   let hasDetectedBypass = false;
   let activeConfig = {};
 
-  // Default configuration based on Cryptoric Auth Control Panel
   const defaultConfig = {
     // Core Security
-    botLockdown: true,            // Blocks headless browsers/Puppeteer
+    botLockdown: true,
     
     // Anti-Bypass Engine
-    cryptoricGuard: true,          // Core protection
-    deepEngine: true,             // Advanced traffic inspection
-    invisibleValidation: true,    // Background math/timing checks
-    minTaskTimeSeconds: 0,         // Prevent instant completion
+    cryptoricGuard: true,
+    deepEngine: true,
+    minTaskTimeSeconds: 0,
+    
+    // Cryptography & API Security
+    requestHashing: true,          // Dynamically sign API requests
+    hashSecret: "cg_default_secret", // Developer must override this
+    hashEndpoints: ["/api/", "submit"], // Endpoints that require signatures
     
     // Bypass Traps
-    refererTrapping: true,        // Strict document.referrer checks
-    unicodeTrap: true,            // Detect zero-width characters
-    userscriptDetection: true,    // Tampermonkey/Greasemonkey
-    spoofTrap: true,              // Fake endpoints to bait bypassers
+    refererTrapping: true,
+    unicodeTrap: true,
+    userscriptDetection: true,
+    spoofTrap: true,
     
     // Aggressive Walls
-    blockVpns: true,              // Timezone mismatch checks
-    blockAdblockers: true,        // Detect blocked ad elements
-    blockIncognito: true,         // Basic private browsing check
-    maxTasksDaily: 0,              // Rate limiting
+    blockVpns: true,
+    blockAdblockers: true,
+    blockIncognito: true,
+    maxTasksDaily: 0,
     
     allowedReferrers: [],
     onDetect: null
   };
 
   const signatures = {
-    deepEngine: [
-      "iwoozie.baby", "lootlink.com", "bypass.vip", "F.E.A.R", "FastForward"
-    ],
+    deepEngine: ["iwoozie.baby", "lootlink.com", "bypass.vip", "F.E.A.R", "FastForward"],
     suspiciousIds: ["cjlaly", "lkuag", "bypass-container"]
   };
 
@@ -55,7 +56,6 @@
 
     alert("❌ Unauthorized Action Detected ❌\nReason: " + reason);
     
-    // Nuke the page
     document.body.innerHTML = `<div style="display:flex;justify-content:center;align-items:center;height:100vh;background:#000;color:red;font-family:monospace;font-size:24px;text-align:center;">
         SECURITY LOCKDOWN<br>Bypass tools are strictly prohibited.<br>[ ${reason} ]
     </div>`;
@@ -66,53 +66,106 @@
   }
 
   /* ==========================================
+     CRYPTOGRAPHY ENGINE (Fast Sync Hash)
+  ========================================== */
+  function generateSignature(url, payload) {
+    const timestamp = Date.now();
+    const rawData = url + activeConfig.hashSecret + timestamp + (payload || "");
+    
+    // Fast synchronous bitwise hash (DJB2 variant)
+    let hash = 5381;
+    for (let i = 0; i < rawData.length; i++) {
+        hash = ((hash << 5) + hash) + rawData.charCodeAt(i);
+    }
+    const signature = (hash >>> 0).toString(16);
+    
+    return {
+        signature: signature,
+        timestamp: timestamp.toString()
+    };
+  }
+
+  function shouldHash(url) {
+    if (!activeConfig.requestHashing) return false;
+    return activeConfig.hashEndpoints.some(ep => url.includes(ep));
+  }
+
+  /* ==========================================
+     ANTI-BYPASS ENGINE & NETWORK INTERCEPTION
+  ========================================== */
+  function setupDeepEngineAndCrypto() {
+    // Intercept Fetch API
+    const originalFetch = window.fetch;
+    window.fetch = function (...args) {
+      const url = args[0]?.url || args[0];
+      let options = args[1] || {};
+
+      if (typeof url === "string") {
+        // 1. Check for Bypass Signatures
+        if (activeConfig.deepEngine && signatures.deepEngine.some(p => url.toLowerCase().includes(p))) {
+          handleDetection("Deep Engine: Malicious fetch intercepted");
+          return Promise.reject("Blocked");
+        }
+
+        // 2. Cryptographic Request Signing
+        if (shouldHash(url)) {
+            const bodyStr = typeof options.body === 'string' ? options.body : "";
+            const cryptoData = generateSignature(url, bodyStr);
+            
+            options.headers = options.headers || {};
+            options.headers['X-Cryptoric-Signature'] = cryptoData.signature;
+            options.headers['X-Cryptoric-Timestamp'] = cryptoData.timestamp;
+            args[1] = options;
+        }
+      }
+      return originalFetch.apply(this, args);
+    };
+
+    // Intercept XMLHttpRequest
+    const originalOpen = XMLHttpRequest.prototype.open;
+    const originalSend = XMLHttpRequest.prototype.send;
+    
+    XMLHttpRequest.prototype.open = function (...args) {
+      this._cgUrl = args[1];
+      if (typeof this._cgUrl === "string" && activeConfig.deepEngine && signatures.deepEngine.some(p => this._cgUrl.toLowerCase().includes(p))) {
+        handleDetection("Deep Engine: Malicious XHR intercepted");
+        throw new Error("Blocked");
+      }
+      originalOpen.apply(this, args);
+    };
+
+    XMLHttpRequest.prototype.send = function (body) {
+       if (this._cgUrl && shouldHash(this._cgUrl)) {
+           const bodyStr = typeof body === 'string' ? body : "";
+           const cryptoData = generateSignature(this._cgUrl, bodyStr);
+           this.setRequestHeader('X-Cryptoric-Signature', cryptoData.signature);
+           this.setRequestHeader('X-Cryptoric-Timestamp', cryptoData.timestamp);
+       }
+       originalSend.call(this, body);
+    };
+  }
+
+
+  /* ==========================================
      CORE SECURITY
   ========================================== */
   function runBotLockdown() {
     if (navigator.webdriver || window.document.documentElement.getAttribute("webdriver")) {
       handleDetection("Headless Browser / Bot Detected");
     }
-    // PhantomJS/Selenium checks
     if (window.callPhantom || window._phantom || window.__nightmare) {
       handleDetection("Automated Testing Framework Detected");
     }
   }
 
-  /* ==========================================
-     ANTI-BYPASS ENGINE
-  ========================================== */
-  function setupDeepEngine() {
-    const originalFetch = window.fetch;
-    window.fetch = function (...args) {
-      const url = args[0]?.url || args[0];
-      if (typeof url === "string" && signatures.deepEngine.some(p => url.toLowerCase().includes(p))) {
-        handleDetection("Deep Engine: Malicious XHR intercepted");
-        return Promise.reject("Blocked");
-      }
-      return originalFetch.apply(this, args);
-    };
-
-    const originalOpen = XMLHttpRequest.prototype.open;
-    XMLHttpRequest.prototype.open = function (...args) {
-      const url = args[1];
-      if (typeof url === "string" && signatures.deepEngine.some(p => url.toLowerCase().includes(p))) {
-        handleDetection("Deep Engine: Malicious XHR intercepted");
-        throw new Error("Blocked");
-      }
-      originalOpen.apply(this, args);
-    };
-  }
-
   function checkMinTaskTime() {
     if (activeConfig.minTaskTimeSeconds > 0) {
       sessionStorage.setItem(TASK_START_KEY, Date.now().toString());
-      
-      // Override typical completion functions (like form submits) if requested
       window.CryptoricGuard.validateCompletionTime = function() {
         const start = parseInt(sessionStorage.getItem(TASK_START_KEY) || "0");
         const elapsed = (Date.now() - start) / 1000;
         if (elapsed < activeConfig.minTaskTimeSeconds) {
-          handleDetection(`Task completed impossibly fast (${elapsed.toFixed(1)}s < ${activeConfig.minTaskTimeSeconds}s). Automation suspected.`);
+          handleDetection(`Task completed impossibly fast (${elapsed.toFixed(1)}s < ${activeConfig.minTaskTimeSeconds}s).`);
           return false;
         }
         return true;
@@ -130,15 +183,10 @@
       if (!isAllowed && ref !== "") {
         handleDetection("Referer Trapping: Invalid Origin", true);
       }
-    } else if (ref === "") {
-        // If strict trapping is on but no allowed referrers provided, direct hits might be suspicious depending on implementation.
-        // We will just log it for now to avoid false positives.
-        console.warn("[Cryptoric Guard] Direct endpoint hit (No referer).");
     }
   }
 
   function setupUnicodeTrap() {
-    // Detect invisible zero-width characters often injected by bypass extensions to tag URLs
     const url = window.location.href;
     const zeroWidthRegex = /[\u200B-\u200D\uFEFF]/g;
     if (zeroWidthRegex.test(url)) {
@@ -151,7 +199,7 @@
     apis.forEach((api) => {
       Object.defineProperty(window, api, {
         get: function () {
-          handleDetection("Userscript Detection: Tampermonkey/Greasemonkey API accessed");
+          handleDetection("Userscript Detection: Tampermonkey API accessed");
           return function () { return null; };
         },
         configurable: false,
@@ -160,7 +208,6 @@
   }
 
   function setupSpoofTrap() {
-    // Create a fake hidden form/button that bypass scripts might try to auto-click
     const trapBtn = document.createElement('button');
     trapBtn.id = "free-access-bypass-trap";
     trapBtn.className = "bypass-completion-btn";
@@ -170,18 +217,12 @@
     trapBtn.innerText = "Complete Action";
     
     trapBtn.addEventListener("click", (e) => {
-        if (e.isTrusted === false) {
-           handleDetection("Spoof Completion Trap: Simulated click detected on bait element", true);
-        } else {
-           handleDetection("Spoof Completion Trap: Bait element triggered", true);
-        }
+        if (e.isTrusted === false) handleDetection("Spoof Completion Trap: Simulated click", true);
+        else handleDetection("Spoof Completion Trap: Bait element triggered", true);
     });
     
-    if (document.body) {
-        document.body.appendChild(trapBtn);
-    } else {
-        document.addEventListener("DOMContentLoaded", () => document.body.appendChild(trapBtn));
-    }
+    if (document.body) document.body.appendChild(trapBtn);
+    else document.addEventListener("DOMContentLoaded", () => document.body.appendChild(trapBtn));
   }
 
   /* ==========================================
@@ -209,8 +250,6 @@
     try {
       const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
       const offset = new Date().getTimezoneOffset();
-      
-      // UTC timezone with a non-zero offset is a classic sign of timezone spoofing or bad VPN config
       if (tz === "Etc/UTC" && offset !== 0) {
          handleDetection("Block VPNs/Proxies: Timezone Spoofing Anomaly Detected");
       }
@@ -218,14 +257,9 @@
   }
 
   function checkIncognito() {
-    // Basic heuristic: requestFileSystem is deprecated but often disabled in incognito
     const fs = window.RequestFileSystem || window.webkitRequestFileSystem;
-    if (!fs) {
-      // Very loose heuristic, might false positive on modern browsers without FS API
-      // We will only log it to avoid breaking modern Firefox/Safari unless strictly enabled
-      if(activeConfig.blockIncognito) {
-          console.warn("[Cryptoric Guard] Incognito/Private mode suspected (FS API missing).");
-      }
+    if (!fs && activeConfig.blockIncognito) {
+       console.warn("[Cryptoric Guard] Incognito/Private mode suspected.");
     }
   }
 
@@ -233,23 +267,15 @@
     if (activeConfig.maxTasksDaily > 0) {
        const today = new Date().toDateString();
        const data = JSON.parse(localStorage.getItem(TASK_COUNT_KEY) || '{"date":"","count":0}');
-       
        if (data.date !== today) {
            localStorage.setItem(TASK_COUNT_KEY, JSON.stringify({date: today, count: 1}));
        } else {
-           if (data.count >= activeConfig.maxTasksDaily) {
-               handleDetection(`Daily Task Limit Reached (${activeConfig.maxTasksDaily}). Try again tomorrow.`);
-           } else {
-               localStorage.setItem(TASK_COUNT_KEY, JSON.stringify({date: today, count: data.count + 1}));
-           }
+           if (data.count >= activeConfig.maxTasksDaily) handleDetection(`Daily Task Limit Reached (${activeConfig.maxTasksDaily}).`);
+           else localStorage.setItem(TASK_COUNT_KEY, JSON.stringify({date: today, count: data.count + 1}));
        }
     }
   }
 
-
-  /* ==========================================
-     INITIALIZATION & DOM OBSERVER
-  ========================================== */
   function setupDOMObserver() {
     const observer = new MutationObserver((mutations) => {
       mutations.forEach((mutation) => {
@@ -263,14 +289,8 @@
         });
       });
     });
-
-    observer.observe(document.documentElement, {
-      childList: true,
-      subtree: true,
-      attributes: true,
-    });
+    observer.observe(document.documentElement, { childList: true, subtree: true, attributes: true });
   }
-
 
   function initialize(userConfig = {}) {
     activeConfig = { ...defaultConfig, ...userConfig };
@@ -283,23 +303,17 @@
   ╚═══════════════════════════════════════════╝
     `);
 
-    // --- Core Security ---
     if (activeConfig.botLockdown) runBotLockdown();
-    
-    // --- Anti-Bypass Engine ---
     if (activeConfig.cryptoricGuard) {
-      if (activeConfig.deepEngine) setupDeepEngine();
+      setupDeepEngineAndCrypto();
       checkMinTaskTime();
       setupDOMObserver();
     }
-
-    // --- Bypass Traps ---
     if (activeConfig.userscriptDetection) blockUserscriptAPIs();
     if (activeConfig.unicodeTrap) setupUnicodeTrap();
     if (activeConfig.refererTrapping) setupRefererTrapping();
     if (activeConfig.spoofTrap) setupSpoofTrap();
 
-    // --- Aggressive Walls (Requires DOM) ---
     const runWalls = () => {
       if (activeConfig.blockAdblockers) checkAdblock();
       if (activeConfig.blockVpns) checkVPN();
@@ -307,21 +321,14 @@
       if (activeConfig.maxTasksDaily > 0) checkDailyTasks();
     };
 
-    if (document.readyState === "loading") {
-      document.addEventListener("DOMContentLoaded", runWalls);
-    } else {
-      runWalls();
-    }
+    if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", runWalls);
+    else runWalls();
     
-    // Expose utility functions safely
     return {
        validateTime: window.CryptoricGuard?.validateCompletionTime || (() => true),
        version: GUARD_VERSION
     };
   }
 
-  window.CryptoricGuard = {
-    init: initialize
-  };
+  window.CryptoricGuard = { init: initialize };
 })();
-
